@@ -1,0 +1,9 @@
+# Closed-class demonstratives (أسماء الإشارة). DATA — fed to the gate, not hardcoded.
+# Each entry: surface → deictic_class.
+deictics:
+  "هذا":   near-singular-masc
+  "هذه":   near-singular-fem
+  "ذلك":   far-singular-masc
+  "تلك":   far-singular-fem
+  "هؤلاء": near-plural
+  "أولئك": far-plural

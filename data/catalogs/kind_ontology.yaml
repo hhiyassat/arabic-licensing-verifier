@@ -1,0 +1,7 @@
+# Ontological class of each claim-kind (منقول: الأصل الحدثي vs الإحالة).
+# derivational  = an event-origin that CAN license derived agency (يقبل الاشتقاق)
+# referential   = a reference-anchor/deictic that CANNOT (مشغّل إحالة)
+kind_class:
+  IsmFael:    derivational   # مشتق فاعل عن أصل حدثي
+  IsmMakan:   derivational   # مشتق مكان عن أصل حدثي
+  IsmIshara:  referential    # اسم إشارة — إحالة مقامية لا أصل حدثي
