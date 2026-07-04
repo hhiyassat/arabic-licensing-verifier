@@ -109,6 +109,21 @@
 يُنسَب إليها، ولا يُوصَف بأنّه طبقةٌ من طبقاتها الرسميّة. العلاقة علاقةُ **إلهامٍ** لا علاقةُ
 **تطابق**. وأيّ ادّعاءٍ بأنّه «طبقة قياسٍ رسميّة» أو «طبقة HR2S رسميّة» باطلٌ دستوريًّا.
 
+**الصياغة المعتمَدة (لا لبس):** *HR2S-style entrance compatibility / methodological
+integration, with no dependency on HR2S or Qiyas code.* أي: توافقُ مدخلٍ على نمط HR2S،
+وتكاملٌ منهجيٌّ فقط، **بلا أيّ اعتمادٍ على كود HR2S أو القياس**. المسار:
+
+```
+Raw Text
+→ HR2S/Qiyas-inspired Entrance Adapter
+→ Candidate Claims + Evidence + Trace
+→ Arabic Licensing Verifier
+```
+
+**القاعدة النهائيّة:** المِهْيَع قد يُحضّر المرشّحات على نمطٍ مُستوحًى من HR2S، لكنّ
+**الصندوق وحده يبتّ فيها**. *The entrance may prepare candidates in an HR2S-inspired way,
+but only the verifier may adjudicate them.*
+
 ---
 
 ## 9. العلاقة مع الصندوق التحقيقيّ (Arabic Licensing Verifier)
