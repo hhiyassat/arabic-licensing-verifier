@@ -1,0 +1,29 @@
+metadata:
+  catalog: roots
+  purpose: "minimal verifier evidence catalog"
+  policy: "H2RS data/artifact provenance only; no H2RS code import"
+  notes:
+    - "The current verifier harness checks catalog presence only."
+    - "Entries remain evidence records, not generated judgments."
+sources:
+  h2rs_snapshot_handoff:
+    path: "/Users/husseinhiyassat/fractal/hussein-root-2-sentence/doc/H2RS_SNAPSHOT_HANDOFF.md"
+    evidence:
+      - "H1/H2 current test selects root = ض ر ب for يَضْرِبُونَهُمْ"
+      - "H5 current test derives ضَارِب and مَضْرِب as candidates"
+  h2rs_validation_tokens:
+    path: "/Users/husseinhiyassat/fractal/hussein-root-2-sentence/tests/validation_tokens_v2.json"
+    evidence:
+      - "A01 token ضَرَبَ expected ACCEPT"
+roots:
+  "ض ر ب":
+    bare: "ضرب"
+    status: attested
+    provenance:
+      source: h2rs_snapshot_handoff
+      lines: "H1/H2 current test; H5 derivation candidates"
+    examples:
+      - surface: "يَضْرِبُونَهُمْ"
+        role: "H1/H2 selected morphological identity"
+      - surface: "ضَرَبَ"
+        role: "H2RS validation token"

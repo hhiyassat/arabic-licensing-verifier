@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from src.contract.layers import Layer
 from src.contract.ranks import Rank
 from src.contract.sinks import Sink, ResidualKind
+from src.contract.evidence import EvidenceBundle
 
 
 @dataclass(frozen=True)
@@ -42,6 +43,7 @@ class Verdict:
     block_reason: str | None = None
     offending_gate: str | None = None
     residual_kind: ResidualKind | None = None
+    evidence: EvidenceBundle | None = None
 
     def __post_init__(self):
         # Constitutional guard: a Blocked verdict MUST say where and why.

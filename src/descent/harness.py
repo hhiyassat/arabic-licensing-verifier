@@ -25,12 +25,12 @@ fiqh) is absent, the correct output is Deferred — not a fabricated Licensed.
 from __future__ import annotations
 import os
 import yaml
-from dataclasses import dataclass
 
 from src.contract.claim import (
     JudgmentClaim, ClaimKind, GenericPayload,
     IsmFaelPayload, IsmMakanPayload, IsmIsharaPayload,
 )
+from src.contract.evidence import CatalogEvidence, EvidenceBundle
 from src.contract.layers import Layer
 from src.contract.ranks import Rank
 from src.contract.sinks import Sink, ResidualKind
@@ -49,9 +49,8 @@ def _load_yaml(name: str) -> dict:
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Evidence availability — what catalogs do we ACTUALLY have?
-#   Present now: kind_ontology (referential/derivational).
-#   ABSENT now:  roots catalog, awzan catalog, fiqh-evidence catalog.
-# The harness must be honest about absence → Deferred, not Licensed.
+# The harness must be honest about absence or non-matching content:
+# Deferred, not Licensed.
 # ═══════════════════════════════════════════════════════════════════════════
 def _available_catalogs() -> dict[str, bool]:
     return {
@@ -62,13 +61,119 @@ def _available_catalogs() -> dict[str, bool]:
     }
 
 
+def _catalog_entries(catalog: dict, key: str) -> dict:
+    entries = catalog.get(key, {})
+    if isinstance(entries, dict):
+        return entries
+    if isinstance(entries, list):
+        return {str(item): {"status": "attested"} for item in entries}
+    return {}
+
+
+def _source_details(catalog: dict, source_id: str | None) -> dict:
+    if not source_id:
+        return {}
+    source = catalog.get("sources", {}).get(source_id, {})
+    if not isinstance(source, dict):
+        return {}
+    return {"source_id": source_id, **source}
+
+
+def _entry_source_id(entry: dict) -> str | None:
+    provenance = entry.get("provenance", {})
+    if isinstance(provenance, dict) and provenance.get("source"):
+        return provenance["source"]
+    source = entry.get("source", {})
+    if isinstance(source, dict) and source.get("catalog"):
+        return source["catalog"]
+    return None
+
+
+def _evidence_for(claim: JudgmentClaim) -> tuple[EvidenceBundle | None, str | None]:
+    needed = _evidence_needed(claim.kind)
+    catalogs = {name: _load_yaml(f"{name}.yaml") for name in needed}
+    missing_files = [name for name, data in catalogs.items() if not data]
+    if missing_files:
+        return None, f"ناقص: {', '.join(missing_files)}"
+
+    if not isinstance(claim.payload, (IsmFaelPayload, IsmMakanPayload)):
+        return EvidenceBundle(), None
+
+    roots = _catalog_entries(catalogs["roots"], "roots")
+    awzan = _catalog_entries(catalogs["awzan"], "awzan")
+    root_entry = roots.get(claim.payload.root)
+    if not root_entry:
+        return None, f"الجذر غير مشهود في roots.yaml: {claim.payload.root}"
+    wazn_entry = awzan.get(claim.payload.wazn)
+    if not wazn_entry:
+        return None, f"الوزن غير مشهود في awzan.yaml: {claim.payload.wazn}"
+
+    surface = _payload_surface(claim.payload)
+    compatible, expected = _surface_compatible(claim.payload.root, claim.payload.wazn, surface)
+    if not compatible:
+        return None, (
+            f"السطح لا يوافق الوزن المشهود: surface={surface!r}, "
+            f"expected={expected!r}"
+        )
+
+    root_source_id = _entry_source_id(root_entry)
+    wazn_source_id = _entry_source_id(wazn_entry)
+    root_provenance = {
+        "entry": root_entry.get("provenance", {}),
+        "source": _source_details(catalogs["roots"], root_source_id),
+    }
+    wazn_provenance = {
+        "entry": wazn_entry.get("source", {}),
+        "source": _source_details(catalogs["awzan"], wazn_source_id),
+    }
+    return EvidenceBundle(
+        root=CatalogEvidence("roots", claim.payload.root, root_entry, root_provenance),
+        wazn=CatalogEvidence("awzan", claim.payload.wazn, wazn_entry, wazn_provenance),
+        surface={
+            "surface": surface,
+            "expected": expected,
+            "compatible": True,
+        },
+    ), None
+
+
+def _payload_surface(payload: IsmFaelPayload | IsmMakanPayload) -> str | None:
+    if isinstance(payload, IsmFaelPayload):
+        return payload.surface_pattern
+    return payload.surface
+
+
+def _surface_compatible(root: str, wazn: str, surface: str | None) -> tuple[bool, str | None]:
+    expected = _minimal_surface(root, wazn)
+    if expected is None:
+        return False, None
+    if surface is None:
+        return False, expected
+    return _normalize_surface(surface) == _normalize_surface(expected), expected
+
+
+def _minimal_surface(root: str, wazn: str) -> str | None:
+    letters = root.split()
+    if len(letters) != 3:
+        return None
+    fa, ayn, lam = letters
+    if wazn == "فاعل":
+        return f"{fa}ا{ayn}{lam}"
+    if wazn == "مَفعِل":
+        return f"مَ{fa}ْ{ayn}ِ{lam}"
+    return None
+
+
+def _normalize_surface(surface: str) -> str:
+    return surface.replace("ْ", "")
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # The descent
 # ═══════════════════════════════════════════════════════════════════════════
 def descend(claim: JudgmentClaim) -> Verdict:
     trace: list[TraceEntry] = []
     step = 0
-    cats = _available_catalogs()
     ontology = _load_yaml("kind_ontology.yaml").get("kind_class", {})
 
     # ── Q1: SCOPE — is this claim's kind even in a band the box can adjudicate?
@@ -108,22 +213,23 @@ def descend(claim: JudgmentClaim) -> Verdict:
                      "GenericPayload لا يبلغ Licensed — يُؤجَّل"))
         return Verdict(Sink.DEFERRED, Layer.SURFACE, Rank.NONE, tuple(trace))
 
-    # ── Q2: EVIDENCE — do we have the catalogs this kind needs?
+    # ── Q2: EVIDENCE — do the catalogs contain this claim's exact evidence?
     step += 1
-    needed = _evidence_needed(claim.kind)
-    missing = [c for c in needed if not cats.get(c, False)]
-    if missing:
+    evidence, evidence_error = _evidence_for(claim)
+    if evidence_error:
         trace.append(TraceEntry(step, "evidence",
-                     "هل الكتالوجات اللازمة متوفّرة؟", False,
-                     f"ناقص: {', '.join(missing)} → لا يمكن بلوغ الترخيص بصدق"))
+                     "هل الجذر والوزن والسطح مشهودات تحديدًا؟", False,
+                     f"{evidence_error} → لا يمكن بلوغ الترخيص بصدق"))
         # honest stop: missing evidence, no proven preventer → Deferred
         return Verdict(
             Sink.DEFERRED, _band_for(claim.kind), Rank.NONE, tuple(trace),
             block_reason=None,
             residual_kind=None,
+            evidence=evidence,
         )
     trace.append(TraceEntry(step, "evidence",
-                            "هل الأدلّة متوفّرة؟", True, "كلّ الكتالوجات اللازمة حاضرة"))
+                            "هل الأدلّة المحدّدة متوفّرة؟", True,
+                            _evidence_note(evidence)))
 
     # ── Q_RESIDUAL: competing readings? (e.g. مَضرِب makan/zaman/aala)
     step += 1
@@ -134,6 +240,7 @@ def descend(claim: JudgmentClaim) -> Verdict:
         return Verdict(
             Sink.RESIDUAL, _band_for(claim.kind), Rank.PLAUSIBLE, tuple(trace),
             residual_kind=ResidualKind.COMPETING_CLAIM,
+            evidence=evidence,
         )
     trace.append(TraceEntry(step, "residual", "هل بقيت احتمالات؟", True,
                             "لا احتمالات متنافسة غير محسومة"))
@@ -143,7 +250,23 @@ def descend(claim: JudgmentClaim) -> Verdict:
     trace.append(TraceEntry(step, "closure",
                             "هل اجتازت كلّ البوابات برخصة؟", True,
                             "كلّ البوابات مرخّصة، والدليل حاضر"))
-    return Verdict(Sink.LICENSED, _band_for(claim.kind), claim.claimed_rank, tuple(trace))
+    return Verdict(
+        Sink.LICENSED, _band_for(claim.kind), claim.claimed_rank, tuple(trace),
+        evidence=evidence,
+    )
+
+
+def _evidence_note(evidence: EvidenceBundle | None) -> str:
+    if not evidence or not evidence.root or not evidence.wazn:
+        return "لا يحتاج هذا النوع إلى كتالوج جذر/وزن"
+    root_source = evidence.root.provenance.get("source", {}).get("source_id", "unknown")
+    wazn_source = evidence.wazn.provenance.get("source", {}).get("source_id", "unknown")
+    surface = evidence.surface or {}
+    return (
+        f"root={evidence.root.key} via {root_source}; "
+        f"wazn={evidence.wazn.key} via {wazn_source}; "
+        f"surface={surface.get('surface')}~{surface.get('expected')}"
+    )
 
 
 def _evidence_needed(kind: ClaimKind) -> list[str]:

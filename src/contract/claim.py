@@ -74,6 +74,7 @@ class IsmMakanPayload:
     root: str
     wazn: str
     possible_readings: tuple[str, ...] = ()
+    surface: str | None = None
 
     KIND = ClaimKind.ISM_MAKAN
 

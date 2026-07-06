@@ -1,0 +1,38 @@
+metadata:
+  catalog: awzan
+  purpose: "minimal verifier evidence catalog"
+  policy: "H2RS data/artifact provenance only; no H2RS code import"
+  notes:
+    - "The current verifier harness checks catalog presence only."
+    - "Pattern entries are copied as attested data records, not executable rules."
+sources:
+  h2rs_derivative_catalog:
+    path: "/Users/husseinhiyassat/fractal/hussein-root-2-sentence/data/مشتقات_ومصادر_موسَّع.csv"
+    evidence:
+      - "row 1: فَاعِل, اسم الفاعل, ثلاثي مجرد"
+      - "row 39: مَفْعِل, اسم الزمان, ثلاثي مجرد"
+      - "row 41: مَفْعِل, اسم المكان, ثلاثي مجرد"
+awzan:
+  "فاعل":
+    vocalized: "فَاعِل"
+    derivative_type: "اسم الفاعل"
+    verb_class: "ثلاثي مجرد"
+    productivity: "قياسي"
+    productive: true
+    source:
+      catalog: h2rs_derivative_catalog
+      row: 1
+  "مَفعِل":
+    vocalized: "مَفْعِل"
+    derivative_types:
+      - "اسم المكان"
+      - "اسم الزمان"
+    verb_class: "ثلاثي مجرد"
+    productivity: "قياسي"
+    productive: true
+    source:
+      catalog: h2rs_derivative_catalog
+      rows:
+        - 39
+        - 41
+    residual_note: "Competes between place/time readings; verifier should return Residual when claim payload leaves both readings open."

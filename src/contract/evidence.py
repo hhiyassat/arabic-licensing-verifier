@@ -12,6 +12,26 @@ Contract (مستنتج, per critique):
     source ∈ { catalog, rule, manual, lexicon, grammar_source,
                corpus_attestation, expert_annotation }
 
-STATUS: stub. Declarations only.
+STATUS: filled minimally. Shape only; no evaluation.
 """
-# TODO(Phase0): declare Evidence, EvidenceSource, EvidenceKind
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any, Mapping
+
+
+@dataclass(frozen=True)
+class CatalogEvidence:
+    """A single matched catalog entry used by a verifier verdict."""
+    catalog: str
+    key: str
+    entry: Mapping[str, Any]
+    provenance: Mapping[str, Any]
+
+
+@dataclass(frozen=True)
+class EvidenceBundle:
+    """Evidence gathered along a descent path."""
+    root: CatalogEvidence | None = None
+    wazn: CatalogEvidence | None = None
+    surface: Mapping[str, Any] | None = None
